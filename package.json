@@ -1,0 +1,25 @@
+{
+  "name": "async-await-lunch-and-learn",
+  "version": "1.0.0",
+  "description": "Code examples for Lunch & Learn on ECMAScript Async/Await",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "callbacks": "node 1-callbacks.js",
+    "promises": "node 2-promises.js",
+    "generators": "node 3-generators.js",
+    "async-await": "babel-node 4-async-await.js"
+  },
+  "author": "Chris Atkins <catkins@zendesk.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "babel": "^6.5.2",
+    "babel-cli": "^6.10.1",
+    "babel-plugin-transform-async-to-generator": "^6.8.0"
+  },
+  "dependencies": {
+    "chalk": "^1.1.3",
+    "co": "^4.6.0",
+    "node-fetch": "^1.5.3"
+  }
+}
