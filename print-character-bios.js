@@ -13,8 +13,8 @@ module.exports = (characters, species, planets) => {
   const speciesByUrl = indexBy(species, 'url')
   const planetsByUrl = indexBy(planets, 'url')
 
-  // print out the character info
-  characters.forEach(character => {
+  // print out the character info (backwards to show most famous at bottom)
+  characters.reverse().forEach(character => {
     console.log(chalk.yellow('name:'), character.name)
     console.log(chalk.blue('url:'), character.url)
     console.log(chalk.blue('mass:'), character.mass)

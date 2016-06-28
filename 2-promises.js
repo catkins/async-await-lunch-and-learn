@@ -1,43 +1,60 @@
-const co = require('co')
-const fetch = require('node-fetch')
-const chalk = require('chalk')
-const printCharacterBios = require('./print-character-bios')
+const co = require('co');
+const request = require('request-promise');
+const chalk = require('chalk');
+const printCharacterBios = require('./print-character-bios');
 
-const get = (url) => {
+function getJSON(url) {
   // force https
-  const httpsUrl = url.replace('http://', 'https://')
+  const httpsUrl = url.replace('http://', 'https://');
 
-  return fetch(httpsUrl).then(response => {
-    console.log(chalk.green('GET'), chalk.blue(httpsUrl), response.status)
-    return response.json()
-  })
-}
+  return request(httpsUrl, { resolveWithFullResponse: true }).then(response => {
+    console.log(chalk.green('GET'), chalk.blue(httpsUrl), response.statusCode);
 
-const fetchAllFromResource = (resource) => {
-  return get(resource).then(page => {
-    const fetchNextPage = (page, records) => {
-      records = [...records, ...page.results]
+    return JSON.parse(response.body);
+  });
+};
+
+function fetchAllFromResource(resource) {
+  return getJSON(resource).then(page => {
+    const fetchPage = (page, records) => {
+      records = [...records, ...page.results];
 
       if (!page.next) {
-        return records
+        return records;
       }
 
-      return get(page.next).then(nextPage => fetchNextPage(nextPage, records))
+      return getJSON(page.next).then(nextPage => fetchPage(nextPage, records));
     }
 
-    return fetchNextPage(page, [])
+    return fetchPage(page, []);
   })
+};
 
-}
+function loadDataSerially(rootResource) {
+  let characters, species, planets;
 
-get('https://swapi.co/api/').then(root => {
-  Promise.all([
-    fetchAllFromResource(root.people),
-    fetchAllFromResource(root.species),
-    fetchAllFromResource(root.planets)
-  ]).then(resolvedPromises => {
-    const [ characters, species, planets ] = resolvedPromises
-    printCharacterBios(characters, species, planets)
+  return fetchAllFromResource(rootResource.people)
+    .then(records => { characters = records; })
+    .then(() => fetchAllFromResource(rootResource.species))
+    .then(records => { species = records; })
+    .then(() => fetchAllFromResource(rootResource.planets))
+    .then(records => { planets = records; })
+    .then(() => ({ characters, species, planets }));
+};
 
+function loadDataInParallel(rootResource) {
+  return Promise.all([
+    fetchAllFromResource(rootResource.people),
+    fetchAllFromResource(rootResource.species),
+    fetchAllFromResource(rootResource.planets)
+  ]).then(([ characters, species, planets ]) => {
+    return { characters, species, planets };
+  });
+};
+
+getJSON('https://swapi.co/api/')
+  .then(rootResource => loadDataSerially(rootResource))
+  .then(({ characters, species, planets }) => {
+    printCharacterBios(characters, species, planets);
   })
-})
+  .catch(error => { console.error(error) }); // handle all errors in one place

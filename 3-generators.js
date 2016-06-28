@@ -1,49 +1,48 @@
-const co = require('co')
-const fetch = require('node-fetch')
-const chalk = require('chalk')
-const printCharacterBios = require('./print-character-bios')
+const co = require('co');
+const request = require('request-promise');
+const chalk = require('chalk');
+const printCharacterBios = require('./print-character-bios');
 
-const get = co.wrap(function* (url) {
+const getJSON = co.wrap(function* (url) {
   // force https
-  const httpsUrl = url.replace('http://', 'https://')
-  const response = yield fetch(httpsUrl)
-  const json     = yield response.json()
+  const httpsUrl = url.replace('http://', 'https://');
+  const response = yield request(httpsUrl, { resolveWithFullResponse: true });
 
-  console.log(chalk.green('GET'), chalk.blue(httpsUrl), response.status)
+  console.log(chalk.green('GET'), chalk.blue(httpsUrl), response.statusCode);
 
-  return json
-})
+  return JSON.parse(response.body);
+});
 
 const fetchAllFromResource = co.wrap(function* (resource) {
-  let page = yield get(resource)
-  let records = page.results
+  let page = yield getJSON(resource);
+  let records = page.results;
 
   while (page.next) {
-    page = yield get(page.next)
-    records = [...records, ...page.results]
+    page = yield getJSON(page.next);
+    records = [...records, ...page.results];
   }
 
   return records;
-})
+});
 
 co(function* () {
   try {
-    const root = yield get('https://swapi.co/api/')
+    const rootResource = yield getJSON('https://swapi.co/api/');
 
     // fetch resources serially
-    // const species = yield fetchAllFromResource(root.species)
-    // const characters = yield fetchAllFromResource(root.people)
-    // const planets = yield fetchAllFromResource(root.planets)
+    const characters = yield fetchAllFromResource(rootResource.people);
+    const species    = yield fetchAllFromResource(rootResource.species);
+    const planets    = yield fetchAllFromResource(rootResource.planets);
 
     // or fetch them in parallel
-    const [ characters, species, planets ] = yield Promise.all([
-      fetchAllFromResource(root.people),
-      fetchAllFromResource(root.species),
-      fetchAllFromResource(root.planets)
-    ])
+    // const [ characters, species, planets ] = yield Promise.all([
+    //   fetchAllFromResource(root.people),
+    //   fetchAllFromResource(root.species),
+    //   fetchAllFromResource(root.planets)
+    // ]);
 
-    printCharacterBios(characters, species, planets)
+    printCharacterBios(characters, species, planets);
   } catch (error) {
-    console.error(error)
+    console.error(error);
   }
-})
+});
